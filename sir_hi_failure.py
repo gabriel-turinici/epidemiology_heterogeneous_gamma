@@ -6,14 +6,16 @@ By running the provided examples, it demonstrates two counter-examples showing t
 cannot be achieved when the mean recovery time (the mean of 1/gamma) is not finite. 
  The results highlight the critical role of recovery time heterogeneity in epidemic modeling.
 
-@author: Gabriel Turinici, 2024
+See arxiv reference https://arxiv.org/abs/2411.13130 for theoretical details
+
+@author: (c) Gabriel Turinici, 2024,2025,...
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 
-%matplotlib inline
+#%matplotlib inline
 #%matplotlib auto
 
 #parameters
@@ -33,7 +35,7 @@ trange = np.linspace(0,T,num=N+1,endpoint=True)
 
 betasir=1./4.
 gammasir=1./6.
-print('reproduction number=',beta/gamma)
+print('reproduction number=',betasir/gammasir)
 
 def sir_list(y,t,betaSIR,gammaSIR):
     """
@@ -67,12 +69,20 @@ Isol=solution[:,1]
 Rsol=solution[:,2]
 
 
-plt.figure("sir_standard",figsize=(3,2),dpi=300)
-plt.plot(trange,Ssol,trange,Isol,trange,Rsol,linewidth=6)
+plt.figure("sir_standard",figsize=(3,2.5),dpi=300)
+
+for data,style,symb in zip([Ssol,Isol,Rsol],
+                               ["solid","dotted","dotted"],['o','d','.']):
+    #print(style)
+    plt.plot(trange,data,linestyle=style,linewidth=6,alpha=0.9,marker=symb)
+
+#plt.plot(trange,Ssol,trange,Isol,trange,Rsol,linewidth=6)
 plt.legend(['S','I','R'])
 plt.xlabel('time')
 plt.tight_layout()
 plt.savefig("sir_standard.pdf")
+plt.show()
+plt.close()
 
 
 
@@ -109,12 +119,20 @@ I2sol=solution2[:,4]
 R2sol=solution2[:,5]
 
 
-plt.figure("sir_2groups",figsize=(3,2),dpi=300)
-plt.plot(trange,S1sol+S2sol,trange,I1sol+I2sol,trange,R1sol+R2sol,linewidth=6)
+plt.figure("sir_2groups",figsize=(3,2.5),dpi=300)
+
+for data,style,symb in zip([S1sol+S2sol,I1sol+I2sol,R1sol+R2sol],
+                               ["solid","dotted","dotted"],['o','d','.']):
+    #print(style)
+    plt.plot(trange,data,linestyle=style,linewidth=6,alpha=0.9,marker=symb)
+
+#plt.plot(trange,S1sol+S2sol,trange,I1sol+I2sol,trange,R1sol+R2sol,linewidth=6)
 plt.legend(['S','I','R'])
 plt.xlabel('time')
 plt.tight_layout()
 plt.savefig("sir_2groups.pdf")
+plt.show()
+plt.close()
 
 
 #%%  We consider now the case gamma(x) = cst * x on [0,1], see paper; 
@@ -134,7 +152,7 @@ trange = np.linspace(0,T,num=N+1,endpoint=True)
 
 betasir=1./4.
 gammasir=1./6.
-print('reproduction number=',beta/gamma)
+print('reproduction number=',betasir/gammasir)
 
 def sir_many_groups(y,t,betaSIR,gamma_vec):
     """
@@ -160,23 +178,56 @@ def sir_many_groups(y,t,betaSIR,gamma_vec):
     ntotal=np.sum(y)
     return list(-betaSIR*Sv*I/ntotal)+list(+betaSIR*Sv*I/ntotal-gamma_vec*Iv)+list(gamma_vec*Iv)
 
-nrgroups=250#number of groups
-y0g = [S0/nrgroups]*nrgroups+ [I0/nrgroups]*nrgroups+ [R0/nrgroups]*nrgroups
 
-solution_g= odeint(sir_many_groups, y0g, trange, 
-                   args=(betasir,gammasir* 
-                (2*np.array(range(nrgroups))+1)/nrgroups ))
+def plot_results_manygroups(gamma_vec,test_label="sir_manygroups"):
+    """
+    Parameters
+    ----------
+    gamma_vec : 1d numy array, contains the averages of gamma over each group 
+    test_label : a name for this test, plot is saved as test_label+'.pdf'
 
-Ssol=np.sum(solution_g[:,:nrgroups],axis=-1)
-Isol=np.sum(solution_g[:,nrgroups:2*nrgroups],axis=-1)
-Rsol=np.sum(solution_g[:,2*nrgroups:],axis=-1)
+    Returns : None, plots the result
+    """
+    
 
-print('S infinity=',Ssol[-1])
+    nrgroups=gamma_vector.shape[0]
+    y0g = [S0/nrgroups]*nrgroups+ [I0/nrgroups]*nrgroups+ [R0/nrgroups]*nrgroups
+        
+    solution_g= odeint(sir_many_groups, y0g, trange, 
+                       args=(betasir,gamma_vec))
+    
+    Ssol=np.sum(solution_g[:,:nrgroups],axis=-1)
+    Isol=np.sum(solution_g[:,nrgroups:2*nrgroups],axis=-1)
+    Rsol=np.sum(solution_g[:,2*nrgroups:],axis=-1)
+    
+    print('S infinity=',Ssol[-1])
+    
+    plt.figure(test_label,figsize=(3,2.5),dpi=300)
+    for data,style,symb in zip([Ssol,Isol,Rsol],
+                                   ["solid","dotted","dotted"],['o','d','.']):
+        #print(style)
+        plt.plot(trange,data,linestyle=style,linewidth=6,alpha=0.9,marker=symb)
+    
+    #plt.plot(trange,Ssol,trange,Isol,trange,Rsol,linewidth=6)
+    plt.legend(['S','I','R'])
+    plt.xlabel('time')
+    plt.tight_layout()
+    plt.savefig(test_label+".pdf")
+    plt.show()
+    plt.close()
 
-plt.figure("sir_2groups",figsize=(3,2),dpi=300)
-plt.plot(trange,Ssol,trange,Isol,trange,Rsol,linewidth=6)
-plt.legend(['S','I','R'])
-plt.xlabel('time')
-plt.tight_layout()
-plt.savefig("sir_manygroups.pdf")
+nr_groups=250#number of groups
+indices=np.array(range(nr_groups))
 
+# we test the case gamma(x) = gamma_average * 2x, x in [0,1]. 
+# To do the simulation we
+# divide the total interval in nrgroups sub-intervals and on each take 
+# the average value of gamma. For Python numbering, index k corresponds
+# to sub-interval [k/nr_groups, (k+1)/nr_groups] with average (2k+1)/nr_groups
+gamma_vector=gammasir*(2*indices+1)/nr_groups
+plot_results_manygroups(gamma_vector,test_label="sir_manygroups")
+
+
+# another test = gamma(x) = gammasir * sqrt(x)* 3/2, has gammasir average
+gamma_vector_sqrt=gammasir* ( (1.+indices)**1.5-indices**1.5) /np.sqrt(nr_groups)
+plot_results_manygroups(gamma_vector_sqrt,test_label="sir_manygroups_sqrt")
